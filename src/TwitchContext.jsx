@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { parseAuthCallback } from "./twitch/auth";
-import { getFollowers, getStream, getUser, getChannel, revokeToken, validateToken } from "./twitch/api";
+import { getFollowers, getStream, getUser, getChannel, revokeToken, validateToken, updateChannel } from "./twitch/api";
 import { connectEventSub } from "./twitch/eventsub";
 import { shouldSpeak, speak } from "./tts";
 import { loadSettings } from "./settings";
@@ -39,9 +39,17 @@ export function TwitchProvider({ children }) {
     setChannel(null)
     setMessages([]);
     setStats(emptyStats());
+    setChannel(null);
 
     if (token) await revokeToken(token);
   };
+
+  const saveChannel = async (changes) => {
+    const token = sessionStorage.getItem("twitch_token");
+    const ok = await updateChannel(token, user.id, changes);
+    if (ok) setChannel(await getChannel(token, user.id));
+    return ok;
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -105,7 +113,7 @@ export function TwitchProvider({ children }) {
 
   return (
     <TwitchContext.Provider
-      value={{ messages, status, stats, clearChatMessages, user, logout, stream, followers, channel }}
+      value={{ messages, status, stats, clearChatMessages, user, logout, stream, followers, channel, saveChannel }}
     >
       {children}
     </TwitchContext.Provider>

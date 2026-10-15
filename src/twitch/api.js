@@ -74,6 +74,33 @@ export async function getChannel(token, broadcasterId) {
   return data.data[0];
 }
 
+export async function updateChannel(token, broadcasterId, changes) {
+  try {
+    const response = await fetch(
+      `https://api.twitch.tv/helix/channels?broadcaster_id=${broadcasterId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Client-Id": import.meta.env.VITE_TWITCH_CLIENT_ID,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(changes)
+      }
+    );
+
+    if (!response.ok) {
+      return false;
+    }
+
+    return true;
+
+
+  } catch {
+    return false;
+  }
+}
+
 export async function getFollowers(token, broadcasterId) {
   const response = await fetch(
     `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${broadcasterId}&first=1`,

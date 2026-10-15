@@ -1,7 +1,6 @@
-import { useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTwitch } from "../TwitchContext";
 import { buildAuthUrl } from "../twitch/auth";
-import { useRef } from "react";
 
 const StatCard = ({ label, value }) => (
   <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
@@ -23,7 +22,20 @@ export const Dashboard = () => {
     stream,
     followers,
     channel,
+    saveChannel,
   } = useTwitch();
+
+  const [title, setTitle] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await saveChannel({ title });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const connected = status === "connected";
   const dotColor = connected ? "bg-green-500" : "bg-zinc-500";
@@ -31,13 +43,16 @@ export const Dashboard = () => {
 
   useEffect(() => {
     const el = feedRef.current;
+    if (el) return;
 
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
     if (nearBottom) el.scrollTop = el.scrollHeight;
 
-    if (el) return;
-    el.scrollTop = el.scrollHeight;
   }, [messages]);
+
+  useEffect(() => {
+    if (channel) setTitle(channel.title);
+  }, [channel]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -49,7 +64,7 @@ export const Dashboard = () => {
         <StatCard label="seguidores" value={followers ?? "-"} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_500px]">
         {/* FEED EN VIVO (COMENTARIOS APARECEN AQUI) */}
         <section className="flex h-128 flex-col rounded-xl border border-zinc-800 bg-zinc-900/60">
           {/* ENCABEZADO */}
@@ -115,7 +130,7 @@ export const Dashboard = () => {
               </div>
             </div>
 
-            <div className="flex items-center just gap-2">
+            <div className="flex items-center gap-2">
               <p className="text-zinc-400 text-xs font-semibold uppercase">
                 STREAM
               </p>
@@ -130,33 +145,56 @@ export const Dashboard = () => {
               )}
             </div>
 
-            <button
-              className="w-full rounded-lg bg-violet-900 py-2 font-semibold hover:bg-violet-700 cursor-pointer"
-              onClick={() => {
-                window.location.href = buildAuthUrl();
-              }}
-            >
-              {connected ? "Reconectar" : "Iniciar Sesión con Twitch"}
-            </button>
-            {connected && (
+            <div className="flex gap-4">
               <button
-                onClick={logout}
-                className="w-full cursor-pointer rounded-lg border border-zinc-700 py-2 text-zinc-300 hover:bg-zinc-800"
+                className="w-full rounded-lg bg-violet-900 py-1 font-semibold hover:bg-violet-700 cursor-pointer"
+                onClick={() => {
+                  window.location.href = buildAuthUrl();
+                }}
               >
-                Cerrar sesión
+                {connected ? "Reconectar" : "Iniciar Sesión con Twitch"}
               </button>
-            )}
+              {connected && (
+                <button
+                  onClick={logout}
+                  className="w-full cursor-pointer rounded-lg border border-zinc-700 py-1 text-zinc-300 hover:bg-zinc-800"
+                >
+                  Cerrar sesión
+                </button>
+              )}
+            </div>
           </div>
-          
-          <div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-              <p className="text-xs uppercase text-zinc-400">
-                Configuración rápida del stream
-              </p>
-              <p className="mt-3 text-xs text-zinc-400">Título del stream</p>
-              <p className="text-sm">{channel?.title ?? "-"}</p>
-              <p className="mt-3 text-xs text-zinc-400">Categoría</p>
+
+          <div className="flex flex-col gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+            <p className="text-xs uppercase text-zinc-400">
+              Configuración rápida del stream
+            </p>
+            <div className="flex flex-col gap-2">
+              <p className=" text-xs text-zinc-400">Título del stream</p>
+              <div className="flex flex-col gap-2 justify-center">
+                <input
+                  type="text"
+                  className="border py-1 px-2 border-zinc-700 outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 rounded-lg w-full"
+                  value={title}
+                  maxLength={140}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+                <p className="text-right text-xs text-zinc-500">
+                  {title.length}/140
+                </p>
+              </div>
+              <p className="text-xs text-zinc-400">Categoría</p>
               <p className="text-sm">{channel?.game_name ?? "-"}</p>
+
+              <div className="flex items-center">
+                <button
+                  onClick={handleSave}
+                  disabled={saving || title.trim() === ""}
+                  className="border ml-auto border-zinc-700 px-10 py-1 rounded-lg cursor-pointer hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? "Guardando..." : "Actualizar"}
+                </button>
+              </div>
             </div>
           </div>
         </section>
